@@ -1,9 +1,86 @@
 #!/usr/bin/env bash
 
-file=$(realpath "$1")
-if [ ! -f "$file" ];then
-    echo "$file not found"
+show_help=0
+show_msg=0
+show_install=0
+force_reinstall=0
+show_version=0
+arg="$1"
+while [ -n "$arg" ];do
+    if [[ "$arg" == "-h" || $arg == "--help" ]];then
+        show_help=1
+        break
+    elif [[ "$arg" == "-m" || "$arg" == "--show-msg" ]];then
+        show_msg=1
+    elif [[ "$arg" == "-i" || "$arg" == "--show-install" ]];then
+        show_install=1
+    elif [[ "$arg" == "-r" || "$arg" == "--reinstall" ]];then
+        force_reinstall=1
+    elif [[ "$arg" == "-v" || "$arg" == "--version" ]];then
+        show_version=1
+        break
+    elif [[ "$arg" == "-"* ]];then
+        if [[ "$arg" == "--"* ]];then
+            echo "x Invalid arg '$arg', see -h or --help for info"
+            exit 1
+        fi
+        while read -rn1 char;do
+            if [ -z "$char" ];then
+                break
+            elif [[ "$char" == "h" ]];then
+                show_help=1
+                break 2
+            elif [[ "$char" == "m" ]];then
+                show_msg=1
+            elif [[ "$char" == "i" ]];then
+                show_install=1
+            elif [[ "$char" == "r" ]];then
+                force_reinstall=1
+            elif [[ "$char" == "v" ]];then
+                show_version=1
+                break 2
+            else
+                echo "x Invalid short arg '$char', see -h or --help for info"
+                exit 1
+            fi
+        done < <(echo "$arg" | cut -c2-)
+    else
+        break
+    fi
+    shift
+    arg=$1
+done
+if [ "$show_version" == 1 ];then
+    echo "This is tppr version 0.1.0"
+    echo "The Tiny Portable Python Runner for hassle-free venv and dep handling"
+    echo "Please see https://github.com/Jelmerro/tppr for updates and info"
     exit
+fi
+if [ "$show_help" == 1 ];then
+    echo "Usage: ./tppr [-h, -m, -i, --help, --show-msg, --show-install] file ..."
+    echo
+    echo "Tiny Portable Python Runner for hassle-free venv and dep handling"
+    echo
+    echo "positional args:"
+    echo "  file  Python script file to run within a project venv"
+    echo "  ...   Any arguments meant for the python script go here"
+    echo
+    echo "options:"
+    echo "  -h, --help          Show this help message and exit"
+    echo "  -m, --show-msg      Print tppr info messages while preparing to run"
+    echo "  -i, --show-install  Print pip requirements installation output"
+    echo "  -r, --reinstall     Reinstall regardless of a correctly versioned venv"
+    echo "  -v, --version       Show program version info and exit"
+    exit
+fi
+if [ -z "$arg" ] || [ "$arg" == "" ];then
+    echo "x No file argument found, please add one"
+    exit 1
+fi
+file=$(realpath "$arg")
+if [ ! -f "$file" ];then
+    echo "x File $file not found"
+    exit 1
 fi
 dir=$(dirname "$file")
 while [[ ! -f "$dir/requirements.txt" && ! -f "$dir/pyproject.toml" && "$dir" != "/" ]];do
@@ -11,36 +88,59 @@ while [[ ! -f "$dir/requirements.txt" && ! -f "$dir/pyproject.toml" && "$dir" !=
 done
 if [[ "$dir" == "/" ]];then
     shift
-    echo "> project dir not found, running with system python"
+    if [ "$show_msg" == 1 ];then
+        echo "> project dir not found, running with system python"
+    fi
     python "$file" "$@"
     exit
 fi
-echo "> project dir detected as $dir"
-
+if [ "$show_msg" == 1 ];then
+    echo "> project dir detected as $dir"
+fi
 cd "$dir" || exit
 full_version=$(python -c "import platform;print(platform.python_version())")
 version=$(echo "$full_version" | sed -e "s/\.[0-9]\+\$//")
 python="$dir/venv/bin/python$version"
 activate="$dir/venv/bin/activate"
-
 if [ -d "$dir/venv" ];then
     if [ ! -f "$python" ];then
-        echo "> deleting existing venv"
+        if [ "$show_msg" == 1 ];then
+            echo "> deleting existing venv"
+        fi
+        rm -rf "$dir/venv"
+    elif [ "$force_reinstall" == 1 ];then
+        if [ "$show_msg" == 1 ];then
+            echo "> force deleting existing valid venv"
+        fi
         rm -rf "$dir/venv"
     fi
 fi
 if [ ! -f "$python" ];then
-    echo "> creating venv"
+    if [ "$show_msg" == 1 ];then
+        echo "> creating venv"
+    fi
     python -m venv "$dir/venv"
     source "$activate"
     if [ -f "$dir/requirements.txt" ];then
-        pip install -r "$dir/requirements.txt"
+        if [ "$show_install" == 1 ];then
+            pip install -r "$dir/requirements.txt"
+        else
+            pip install -r "$dir/requirements.txt" 2>/dev/null >/dev/null
+        fi
     fi
-    pip install "$dir"
-    echo "> sourced, installed and done"
+    if [ "$show_install" == 1 ];then
+        pip install "$dir"
+    else
+        pip install "$dir" 2>/dev/null >/dev/null
+    fi
+    if [ "$show_msg" == 1 ];then
+        echo "> sourced, installed and done"
+    fi
 else
     source "$activate"
 fi
 shift
-echo "$ $python"
+if [ "$show_msg" == 1 ];then
+    echo "$ $python"
+fi
 "$python" "$file" "$@"
