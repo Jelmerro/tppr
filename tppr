@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+
+file=$(realpath "$1")
+if [ ! -f "$file" ];then
+    echo "$file not found"
+    exit
+fi
+dir=$(dirname "$file")
+
+cd "$dir" || exit
+py_verfull=$(python -c "import platform;print(platform.python_version())")
+py_ver=$(echo "$py_verfull" | sed -e "s/\.[0-9]\+\$//")
+py_venv_dir="$dir/venv"
+py_exec="$py_venv_dir/bin/python$py_ver"
+py_act="$py_venv_dir/bin/activate"
+
+if [ -d "$py_venv_dir" ];then
+    if [ ! -f "$py_exec" ];then
+        echo "> deleting existing venv"
+        rm -rf "$py_venv_dir"
+    fi
+fi
+if [ ! -f "$py_exec" ];then
+    echo "> creating venv"
+    python -m venv "$py_venv_dir"
+    source "$py_act"
+    pip install -r "$dir/requirements"
+    pip install "$dir"
+    echo -e "> sourced, installed and done\n"
+else
+    source "$py_act"
+fi
+shift
+"$py_exec" "$file" "$@"
