@@ -57,7 +57,7 @@ if [ "$show_version" == 1 ];then
     exit
 fi
 if [ "$show_help" == 1 ];then
-    echo "Usage: ./tppr [-h, -m, -i, --help, --show-msg, --show-install] file ..."
+    echo "Usage: ./tppr [options] file ..."
     echo
     echo "Tiny Portable Python Runner for hassle-free venv and dep handling"
     echo
@@ -74,7 +74,7 @@ if [ "$show_help" == 1 ];then
     exit
 fi
 if [ -z "$arg" ] || [ "$arg" == "" ];then
-    echo "x No file argument found, please add one"
+    echo "x No file argument found, see -h or --help for info"
     exit 1
 fi
 file=$(realpath "$arg")

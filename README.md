@@ -24,7 +24,9 @@ chmod +x ~/.local/bin/tppr
 
 Once installed, simply run `tppr` with a Python script as an argument.
 This will install Python and all the deps inside a venv and run the script.
-For example `tppr ~/projects/example/file.py <args>`, with args all passed to the Python script.
+With `tppr ~/projects/example/file.py <args>` you can pass all args to the Python script.
+You can also supply options to tppr if you include them before the filename,
+please see `tppr -h` for help, advanced usage and additional options.
 
 ## License
 
