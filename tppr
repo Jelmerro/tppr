@@ -6,29 +6,41 @@ if [ ! -f "$file" ];then
     exit
 fi
 dir=$(dirname "$file")
+while [[ ! -f "$dir/requirements.txt" && ! -f "$dir/pyproject.toml" && "$dir" != "/" ]];do
+    dir=$(dirname "$dir")
+done
+if [[ "$dir" == "/" ]];then
+    shift
+    echo "> project dir not found, running with system python"
+    python "$file" "$@"
+    exit
+fi
+echo "> project dir detected as $dir"
 
 cd "$dir" || exit
-py_verfull=$(python -c "import platform;print(platform.python_version())")
-py_ver=$(echo "$py_verfull" | sed -e "s/\.[0-9]\+\$//")
-py_venv_dir="$dir/venv"
-py_exec="$py_venv_dir/bin/python$py_ver"
-py_act="$py_venv_dir/bin/activate"
+full_version=$(python -c "import platform;print(platform.python_version())")
+version=$(echo "$full_version" | sed -e "s/\.[0-9]\+\$//")
+python="$dir/venv/bin/python$version"
+activate="$dir/venv/bin/activate"
 
-if [ -d "$py_venv_dir" ];then
-    if [ ! -f "$py_exec" ];then
+if [ -d "$dir/venv" ];then
+    if [ ! -f "$python" ];then
         echo "> deleting existing venv"
-        rm -rf "$py_venv_dir"
+        rm -rf "$dir/venv"
     fi
 fi
-if [ ! -f "$py_exec" ];then
+if [ ! -f "$python" ];then
     echo "> creating venv"
-    python -m venv "$py_venv_dir"
-    source "$py_act"
-    pip install -r "$dir/requirements"
+    python -m venv "$dir/venv"
+    source "$activate"
+    if [ -f "$dir/requirements.txt" ];then
+        pip install -r "$dir/requirements.txt"
+    fi
     pip install "$dir"
-    echo -e "> sourced, installed and done\n"
+    echo "> sourced, installed and done"
 else
-    source "$py_act"
+    source "$activate"
 fi
 shift
-"$py_exec" "$file" "$@"
+echo "$ $python"
+"$python" "$file" "$@"
