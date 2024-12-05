@@ -99,7 +99,7 @@ if [ "$show_msg" == 1 ];then
 fi
 cd "$dir" || exit
 full_version=$(python -c "import platform;print(platform.python_version())")
-version=$(echo "$full_version" | sed -e "s/\.[0-9]\+\$//")
+version=${full_version%.*}
 python="$dir/venv/bin/python$version"
 activate="$dir/venv/bin/activate"
 if [ -d "$dir/venv" ];then
