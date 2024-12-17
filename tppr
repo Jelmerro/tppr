@@ -97,7 +97,6 @@ fi
 if [ "$show_msg" == 1 ];then
     echo "> project dir detected as $dir"
 fi
-cd "$dir" || exit
 full_version=$(python -c "import platform;print(platform.python_version())")
 version=${full_version%.*}
 python="$dir/venv/bin/python$version"
