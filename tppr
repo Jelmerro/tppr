@@ -100,9 +100,10 @@ fi
 full_version=$(python -c "import platform;print(platform.python_version())")
 version=${full_version%.*}
 python="$dir/venv/bin/python$version"
+pip="$dir/venv/bin/pip$version"
 activate="$dir/venv/bin/activate"
 if [ -d "$dir/venv" ];then
-    if [ ! -f "$python" ];then
+    if [ ! -f "$python" ]  || [ ! -f "$pip" ] || [ ! -f "$activate" ];then
         if [ "$show_msg" == 1 ];then
             echo "> deleting existing venv"
         fi
@@ -114,23 +115,23 @@ if [ -d "$dir/venv" ];then
         rm -rf "$dir/venv"
     fi
 fi
-if [ ! -f "$python" ];then
+if [ ! -f "$python" ] || [ ! -f "$pip" ] || [ ! -f "$activate" ];then
     if [ "$show_msg" == 1 ];then
         echo "> creating venv"
     fi
-    python -m venv "$dir/venv"
+    "python$version" -m venv "$dir/venv"
     source "$activate"
     if [ -f "$dir/requirements.txt" ];then
         if [ "$show_install" == 1 ];then
-            pip install -r "$dir/requirements.txt"
+            "$pip" install -r "$dir/requirements.txt"
         else
-            pip install -r "$dir/requirements.txt" 2>/dev/null >/dev/null
+           "$pip" install -r "$dir/requirements.txt" 2>/dev/null >/dev/null
         fi
     fi
     if [ "$show_install" == 1 ];then
-        pip install "$dir"
+        "$pip" install "$dir"
     else
-        pip install "$dir" 2>/dev/null >/dev/null
+        "$pip" install "$dir" 2>/dev/null >/dev/null
     fi
     if [ "$show_msg" == 1 ];then
         echo "> sourced, installed and done"
