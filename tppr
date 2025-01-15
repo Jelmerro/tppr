@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+# parse args
 show_help=0
 show_msg=0
 show_install=0
@@ -50,6 +51,9 @@ while [ -n "$arg" ];do
     shift
     arg=$1
 done
+shift
+
+# early exit paths
 if [ "$show_version" == 1 ];then
     echo "This is tppr version 0.1.0"
     echo "The Tiny Portable Python Runner for hassle-free venv and dep handling"
@@ -82,43 +86,47 @@ if [ ! -f "$file" ];then
     echo "x File $file not found"
     exit 1
 fi
+
+# echo helper to only show messages if enabled
+msg() {
+    if [ "$show_msg" == 1 ];then
+        echo "$1"
+    fi
+}
+
+# project base dir, or run with plain python binary if not found
 dir=$(dirname "$file")
 while [[ ! -f "$dir/requirements.txt" && ! -f "$dir/pyproject.toml" && "$dir" != "/" ]];do
     dir=$(dirname "$dir")
 done
 if [[ "$dir" == "/" ]];then
-    shift
-    if [ "$show_msg" == 1 ];then
-        echo "> project dir not found, running with system python"
-    fi
+    msg "> project dir not found, running with system python"
     python "$file" "$@"
     exit
 fi
-if [ "$show_msg" == 1 ];then
-    echo "> project dir detected as $dir"
-fi
+msg "> project dir detected as $dir"
+
+# find latest python version and latest executable paths
 full_version=$(python -c "import platform;print(platform.python_version())")
 version=${full_version%.*}
 python="$dir/venv/bin/python$version"
 pip="$dir/venv/bin/pip$version"
 activate="$dir/venv/bin/activate"
+
+# delete existing venv if outdated, incomplete or forced to be deleted
 if [ -d "$dir/venv" ];then
     if [ ! -f "$python" ]  || [ ! -f "$pip" ] || [ ! -f "$activate" ];then
-        if [ "$show_msg" == 1 ];then
-            echo "> deleting existing venv"
-        fi
+        msg "> deleting existing venv"
         rm -rf "$dir/venv"
     elif [ "$force_reinstall" == 1 ];then
-        if [ "$show_msg" == 1 ];then
-            echo "> force deleting existing valid venv"
-        fi
+        msg "> force deleting existing valid venv"
         rm -rf "$dir/venv"
     fi
 fi
+
+# create new venv and install deps, then source it
 if [ ! -f "$python" ] || [ ! -f "$pip" ] || [ ! -f "$activate" ];then
-    if [ "$show_msg" == 1 ];then
-        echo "> creating venv"
-    fi
+    msg "> creating venv"
     "python$version" -m venv "$dir/venv"
     source "$activate"
     if [ -f "$dir/requirements.txt" ];then
@@ -133,14 +141,11 @@ if [ ! -f "$python" ] || [ ! -f "$pip" ] || [ ! -f "$activate" ];then
     else
         "$pip" install "$dir" 2>/dev/null >/dev/null
     fi
-    if [ "$show_msg" == 1 ];then
-        echo "> sourced, installed and done"
-    fi
+    msg "> sourced, installed and done"
 else
     source "$activate"
 fi
-shift
-if [ "$show_msg" == 1 ];then
-    echo "$ $python"
-fi
+
+# run the file with venv's python
+msg "$ $python"
 "$python" "$file" "$@"
